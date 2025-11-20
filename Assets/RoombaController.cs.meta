@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 653a053364795554c90fd895c1cf6a3b
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - dustPuffEffect: {fileID: 5121823619010289813, guid: d3d8ed3da3f359d4d9e31a6a808a33e8, type: 3}
+  - dustCounterText: {instanceID: 0}
+  - batteryGauge: {instanceID: 0}
+  - batteryFillImage: {instanceID: 0}
+  - motorSound: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
