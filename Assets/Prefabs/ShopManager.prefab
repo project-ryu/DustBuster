@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7888060174412897032}
   - component: {fileID: 6722086425474429085}
+  - component: {fileID: 4338977388279572139}
   m_Layer: 0
   m_Name: ShopManager
   m_TagString: Untagged
@@ -46,10 +47,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ShopManager
   shopPanel: {fileID: 0}
   shopButton: {fileID: 0}
+  startLevelButton: {fileID: 0}
+  shopOpenSound: {fileID: 8300000, guid: bef999ea0b5f4994e906f59e610391ff, type: 3}
+  purchaseSound: {fileID: 8300000, guid: 627841d127617f64e892422b7ceaf247, type: 3}
+  audioSource: {fileID: 4338977388279572139}
   speedUpgradeButton: {fileID: 0}
   speedUpgradeText: {fileID: 0}
   speedUpgradeCost: 5
-  speedUpgradeAmount: 1
+  speedUpgradeAmount: 2
   speedUpgradeLevel: 0
   maxSpeedLevel: 5
   batteryUpgradeButton: {fileID: 0}
@@ -58,9 +63,107 @@ MonoBehaviour:
   batteryUpgradeAmount: 20
   batteryUpgradeLevel: 0
   maxBatteryLevel: 5
-  waterAttachmentButton: {fileID: 0}
-  waterAttachmentText: {fileID: 0}
-  waterAttachmentCost: 10
-  hasWaterAttachment: 0
+  dustCapacityUpgradeButton: {fileID: 0}
+  dustCapacityUpgradeText: {fileID: 0}
+  scannerUpgradeButton: {fileID: 0}
+  scannerUpgradeText: {fileID: 0}
+  laserScanner: {fileID: 0}
   roombaController: {fileID: 0}
   gameManager: {fileID: 0}
+--- !u!82 &4338977388279572139
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5779102432916773328}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 0}
+  m_PlayOnAwake: 0
+  m_Volume: 0.7
+  m_Pitch: 1
+  Loop: 0
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4

@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 2928638949238277751}
   - component: {fileID: 4593619040411600246}
   - component: {fileID: 7885895919569992809}
+  - component: {fileID: 8998228922185928441}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -45,21 +46,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 721d153cf7356504a972a6d1c8ec45ba, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
+  roombaController: {fileID: 0}
+  shopManager: {fileID: 0}
   totalDustTiles: 0
-  botcoins: 10
-  levelCompletionReward: 20
+  totalWaterPools: 0
+  botcoins: 200
+  levelCompletionReward: 200
   botcoinText: {fileID: 0}
+  dustTilesText: {fileID: 0}
+  waterPoolsText: {fileID: 0}
   jobCompletePanel: {fileID: 0}
   levelCompletePanel: {fileID: 0}
   statsText: {fileID: 0}
   chargingStationIndicator: {fileID: 0}
-  indicatorSpinSpeed: 100
-  indicatorBobSpeed: 2
-  indicatorBobHeight: 0.3
   requiredCenterDistance: 1.5
-  roombaController: {fileID: 0}
-  shopManager: {fileID: 0}
-  allDustCleared: 0
+  levelCompleteSound: {fileID: 8300000, guid: b90c259f7b730d94fab5bc585b880673, type: 3}
+  audioSource: {fileID: 8998228922185928441}
 --- !u!114 &7885895919569992809
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -72,3 +74,100 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b82aeea178d7d7047af8dd9f0d910ee6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SceneTransition
+--- !u!82 &8998228922185928441
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7001198173316878331}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 8300000, guid: 09c411526f5d09e42beb9c4f4869b0f7, type: 3}
+  m_PlayOnAwake: 0
+  m_Volume: 1
+  m_Pitch: 1
+  Loop: 0
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4

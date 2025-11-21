@@ -16,8 +16,8 @@ public class GameManager : MonoBehaviour
     private bool objectivesCalculated = false;
 
     [Header("Economy")]
-    public int botcoins = 10;
-    public int levelCompletionReward = 20;
+    public int botcoins = 200;
+    public int levelCompletionReward = 200;
 
     [Header("UI References")]
     public TextMeshProUGUI botcoinText;
@@ -68,7 +68,7 @@ public class GameManager : MonoBehaviour
 
         StartCoroutine(DelayedCalculateObjectives());
 
-        botcoins = PlayerPrefs.GetInt("Botcoins", 10);
+        botcoins = PlayerPrefs.GetInt("Botcoins", 200);
         Debug.Log("Loaded botcoins: " + botcoins);
 
         if (chargingStationIndicator != null)

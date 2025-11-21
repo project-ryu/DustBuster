@@ -28,41 +28,51 @@ public class RoombaController : MonoBehaviour
     private bool isCharging = false;
     private bool batteryDead = false;
 
-    [Header("Water Tank")]
-    public GameObject waterTank;
-    public Transform waterFill;
-    public TextMeshProUGUI waterTankPercentText;
-    public int waterCollected = 0;
-    public int maxWaterCapacity = 2;
-    private float maxFillHeight = 1f;
-    private float currentPuddleProgress = 0f;
+    [Header("Dust Tank System")]
+    public GameObject dustTank; // The parent GameObject
+    public GameObject tankContainer; // NEW: The visual container cube
+    public Transform dustFill; // The fill indicator inside the tank
+    public TextMeshProUGUI dustTankPercentText;
+    public int dustCollected = 0;
+    public int maxDustCapacity = 10;
+    private float maxDustFillHeight = 1f;
+    private bool isTankFull = false;
 
-    [Header("Water Physics")]
-    public float normalMoveSpeed = 5f;
-    public float waterSlipperiness = 0.3f;
-    public float waterDrag = 0.5f;
+    // [Header("Water Tank")]
+    // public GameObject waterTank;
+    // public Transform waterFill;
+    // public TextMeshProUGUI waterTankPercentText;
+    // public int waterCollected = 0;
+    // public int maxWaterCapacity = 2;
+    // private float maxFillHeight = 1f;
+    // private float currentPuddleProgress = 0f;
 
-    private bool isOnWater = false;
-    private int waterPuddlesInContact = 0;
+    // [Header("Water Physics")]
+    // public float normalMoveSpeed = 5f;
+    // public float waterSlipperiness = 0.3f;
+    // public float waterDrag = 0.5f;
 
-    [Header("Water Burden System")]
-    private bool _hasBurden = false;
-    public bool hasBurden
-    {
-        get { return _hasBurden; }
-        set
-        {
-            if (_hasBurden != value)
-            {
-                Debug.Log("*** BURDEN CHANGED: " + _hasBurden + " → " + value + " ***");
-                Debug.Log("Stack trace: " + System.Environment.StackTrace);
-                _hasBurden = value;
-            }
-        }
-    }
-    public float burdenSlipperiness = 0.45f; 
-    public float burdenDrag = 0.2f; 
-    public int waterResistanceLevel = 0;
+    // private bool isOnWater = false;
+    // private int waterPuddlesInContact = 0;
+
+    // [Header("Water Burden System")]
+    // private bool _hasBurden = false;
+    // public bool hasBurden
+    // {
+    //     get { return _hasBurden; }
+    //     set
+    //     {
+    //         if (_hasBurden != value)
+    //         {
+    //             Debug.Log("*** BURDEN CHANGED: " + _hasBurden + " → " + value + " ***");
+    //             Debug.Log("Stack trace: " + System.Environment.StackTrace);
+    //             _hasBurden = value;
+    //         }
+    //     }
+    // }
+    // public float burdenSlipperiness = 0.45f; 
+    // public float burdenDrag = 0.2f; 
+    // public int waterResistanceLevel = 0;
 
     [Header("Audio")]
     public AudioSource motorSound;
@@ -121,7 +131,7 @@ public class RoombaController : MonoBehaviour
                         RigidbodyConstraints.FreezePositionY;
 
         currentBattery = maxBattery;
-        normalMoveSpeed = moveSpeed;
+        // normalMoveSpeed = moveSpeed;
 
         if (motorSound == null)
         {
@@ -139,25 +149,47 @@ public class RoombaController : MonoBehaviour
             batteryFillImage = batteryGauge.fillRect.GetComponent<Image>();
         }
 
-        if (waterTank != null)
+        if (dustTank != null)
         {
-            waterTank.SetActive(false);
+            dustTank.SetActive(true); // Always visible
         }
 
-        if (waterTankPercentText != null)
+        if (dustTankPercentText != null)
         {
-            waterTankPercentText.gameObject.SetActive(false);
+            dustTankPercentText.gameObject.SetActive(true);
         }
-        UpdateBatteryUI();
 
-        if (waterTank != null)
+        UpdateDustTankVisuals();
+
+        // Remove any colliders from dust tank so it doesn't interfere
+        if (dustTank != null)
         {
-            Collider[] tankColliders = waterTank.GetComponentsInChildren<Collider>(true);
+            Collider[] tankColliders = dustTank.GetComponentsInChildren<Collider>(true);
             foreach (Collider col in tankColliders)
             {
-                Destroy(col); // Remove colliders entirely
+                Destroy(col);
             }
         }
+
+        // if (waterTank != null)
+        // {
+        //     waterTank.SetActive(false);
+        // }
+
+        // if (waterTankPercentText != null)
+        // {
+        //     waterTankPercentText.gameObject.SetActive(false);
+        // }
+
+        // if (waterTank != null)
+        // {
+        //     Collider[] tankColliders = waterTank.GetComponentsInChildren<Collider>(true);
+        //     foreach (Collider col in tankColliders)
+        //     {
+        //         Destroy(col); // Remove colliders entirely
+        //     }
+        // }
+        UpdateBatteryUI();
     }
 
     void Update()
@@ -185,6 +217,14 @@ public class RoombaController : MonoBehaviour
         batteryDead = currentBattery <= 0;
 
         UpdateMotorSound(isMoving);
+
+        if (Input.GetKeyDown(KeyCode.P) && tankContainer != null)
+        {
+            Debug.Log("=== TANK DEBUG ===");
+            Debug.Log("Current scale: " + tankContainer.transform.localScale);
+            Debug.Log("Max capacity: " + maxDustCapacity);
+            Debug.Log("Current dust: " + dustCollected);
+        }
     }
 
     bool IsPlayerMoving()
@@ -204,10 +244,10 @@ public class RoombaController : MonoBehaviour
             return;
         }
 
-        if (isCharging && hasBurden)
-        {
-            hasBurden = false;
-        }
+        // if (isCharging && hasBurden)
+        // {
+        //     hasBurden = false;
+        // }
 
         float move = Input.GetAxis("Vertical");
         float rotate = Input.GetAxis("Horizontal");
@@ -223,33 +263,33 @@ public class RoombaController : MonoBehaviour
 
         float currentSpeed = moveSpeed * speedMultiplier;
 
-        float appliedSlipperiness = 0f;
-        float appliedDrag = 1f;
+        // float appliedSlipperiness = 0f;
+        // float appliedDrag = 1f;
 
-        ShopManager shop = FindFirstObjectByType<ShopManager>();
-        bool hasUpgrade = (shop != null && shop.hasWaterAttachment);
+        // ShopManager shop = FindFirstObjectByType<ShopManager>();
+        // bool hasUpgrade = (shop != null && shop.hasWaterAttachment);
 
-        bool shouldHaveBurden = (!hasUpgrade && isOnWater) ||
-                                (hasUpgrade && waterCollected >= maxWaterCapacity);
+        // bool shouldHaveBurden = (!hasUpgrade && isOnWater) ||
+        //                         (hasUpgrade && waterCollected >= maxWaterCapacity);
 
-        if (shouldHaveBurden || hasBurden)
-        {
-            float resistanceReduction = waterResistanceLevel * 0.15f;
-            appliedSlipperiness = burdenSlipperiness * (1f - resistanceReduction);
-            appliedDrag = burdenDrag * (1f + resistanceReduction * 2f);
-        }
-        else if (isOnWater)
-        {
-            appliedSlipperiness = waterSlipperiness;
-            appliedDrag = waterDrag;
-        }
+        // if (shouldHaveBurden || hasBurden)
+        // {
+        //     float resistanceReduction = waterResistanceLevel * 0.15f;
+        //     appliedSlipperiness = burdenSlipperiness * (1f - resistanceReduction);
+        //     appliedDrag = burdenDrag * (1f + resistanceReduction * 2f);
+        // }
+        // else if (isOnWater)
+        // {
+        //     appliedSlipperiness = waterSlipperiness;
+        //     appliedDrag = waterDrag;
+        // }
 
-        if (appliedSlipperiness > 0)
-        {
-            move *= (1f - appliedSlipperiness);
-            rotate *= (1f - appliedSlipperiness);
-            rb.linearVelocity *= (1f - appliedDrag * Time.fixedDeltaTime);
-        }
+        // if (appliedSlipperiness > 0)
+        // {
+        //     move *= (1f - appliedSlipperiness);
+        //     rotate *= (1f - appliedSlipperiness);
+        //     rb.linearVelocity *= (1f - appliedDrag * Time.fixedDeltaTime);
+        // }
 
         float turn = rotate * rotateSpeed * Time.fixedDeltaTime;
         Quaternion turnRotation = Quaternion.Euler(0f, turn, 0f);
@@ -257,19 +297,19 @@ public class RoombaController : MonoBehaviour
 
         Vector3 moveDirection = transform.forward * move * currentSpeed;
 
-        if (appliedSlipperiness > 0)
-        {
-            rb.linearVelocity += moveDirection * Time.fixedDeltaTime;
+        // if (appliedSlipperiness > 0)
+        // {
+        //     rb.linearVelocity += moveDirection * Time.fixedDeltaTime;
 
-            if (rb.linearVelocity.magnitude > currentSpeed)
-            {
-                rb.linearVelocity = rb.linearVelocity.normalized * currentSpeed;
-            }
-        }
-        else
-        {
-            rb.linearVelocity = new Vector3(moveDirection.x, 0, moveDirection.z);
-        }
+        //     if (rb.linearVelocity.magnitude > currentSpeed)
+        //     {
+        //         rb.linearVelocity = rb.linearVelocity.normalized * currentSpeed;
+        //     }
+        // }
+        // else
+        // {
+        //     rb.linearVelocity = new Vector3(moveDirection.x, 0, moveDirection.z);
+        // }
 
         if (isIdleMode)
         {
@@ -285,17 +325,37 @@ public class RoombaController : MonoBehaviour
 
     void OnTriggerEnter(Collider other)
     {
-        // Existing dust collection code
         if (other.CompareTag("DustTile"))
         {
+            // Check if tank is full
+            if (isTankFull)
+            {
+                Debug.Log("Dust tank is FULL! Can't collect more dust. Empty at charging station!");
+                return; // Don't collect if tank is full
+            }
+
+            // Spawn dust puff effect
             if (dustPuffEffect != null)
             {
                 GameObject puff = Instantiate(dustPuffEffect, other.transform.position, Quaternion.identity);
                 Destroy(puff, 1f);
             }
 
+            // Destroy the dust tile
             Destroy(other.gameObject);
 
+            // Add to dust tank
+            dustCollected++;
+            UpdateDustTankVisuals();
+
+            // Check if tank is now full
+            if (dustCollected >= maxDustCapacity)
+            {
+                isTankFull = true;
+                Debug.Log("*** DUST TANK NOW FULL! ***");
+            }
+
+            // Notify GameManager
             GameManager gameManager = FindFirstObjectByType<GameManager>();
             if (gameManager != null)
             {
@@ -355,43 +415,42 @@ public class RoombaController : MonoBehaviour
             Debug.Log("Trash collected! +$" + trashMoneyValue);
         }
 
-        // Existing water puddle code
-        if (other.CompareTag("WaterPuddle"))
-        {
-            waterPuddlesInContact++;
+        // if (other.CompareTag("WaterPuddle"))
+        // {
+        //     waterPuddlesInContact++;
 
-            ShopManager shop = FindFirstObjectByType<ShopManager>();
-            bool hasUpgrade = (shop != null && shop.hasWaterAttachment);
+        //     ShopManager shop = FindFirstObjectByType<ShopManager>();
+        //     bool hasUpgrade = (shop != null && shop.hasWaterAttachment);
 
-            if (!hasUpgrade)
-            {
-                isOnWater = true;
+        //     if (!hasUpgrade)
+        //     {
+        //         isOnWater = true;
 
-                if (!hasBurden)
-                {
-                    hasBurden = true;
-                    Debug.Log("NO UPGRADE - Burden applied!");
-                }
-            }
-            else
-            {
-                if (waterCollected >= maxWaterCapacity)
-                {
-                    isOnWater = true;
+        //         if (!hasBurden)
+        //         {
+        //             hasBurden = true;
+        //             Debug.Log("NO UPGRADE - Burden applied!");
+        //         }
+        //     }
+        //     else
+        //     {
+        //         if (waterCollected >= maxWaterCapacity)
+        //         {
+        //             isOnWater = true;
 
-                    if (!hasBurden)
-                    {
-                        hasBurden = true;
-                        Debug.Log("TANK FULL - Burden applied!");
-                    }
-                }
-                else
-                {
-                    isOnWater = false;
-                    Debug.Log("Has upgrade and tank not full - NO slipperiness");
-                }
-            }
-        }
+        //             if (!hasBurden)
+        //             {
+        //                 hasBurden = true;
+        //                 Debug.Log("TANK FULL - Burden applied!");
+        //             }
+        //         }
+        //         else
+        //         {
+        //             isOnWater = false;
+        //             Debug.Log("Has upgrade and tank not full - NO slipperiness");
+        //         }
+        //     }
+        // }
 
         if (other.CompareTag("ChargingStation"))
         {
@@ -426,45 +485,63 @@ public class RoombaController : MonoBehaviour
                     gameManager.OnReturnedToChargingStation();
                 }
             }
-
-            float drainSpeed = 0.5f;
-
-            if (waterCollected > 0 || currentPuddleProgress > 0)
+            
+            if (dustCollected > 0)
             {
-                if (currentPuddleProgress > 0)
+                float emptySpeed = 5f; // How fast to empty (dust per second)
+                float dustToEmpty = emptySpeed * Time.deltaTime;
+                
+                dustCollected -= Mathf.CeilToInt(dustToEmpty);
+                dustCollected = Mathf.Max(0, dustCollected);
+                
+                UpdateDustTankVisuals();
+                
+                if (dustCollected <= 0)
                 {
-                    currentPuddleProgress -= drainSpeed * Time.deltaTime;
-                    if (currentPuddleProgress < 0)
-                    {
-                        currentPuddleProgress = 0;
-                    }
+                    dustCollected = 0;
+                    isTankFull = false;
+                    Debug.Log("Dust tank emptied!");
                 }
-                else if (waterCollected > 0)
-                {
-                    float totalWater = waterCollected;
-                    totalWater -= drainSpeed * Time.deltaTime;
-
-                    if (totalWater <= 0)
-                    {
-                        waterCollected = 0;
-                        currentPuddleProgress = 0;
-                        Debug.Log("Water tank fully drained!");
-                    }
-                    else
-                    {
-                        waterCollected = Mathf.FloorToInt(totalWater);
-                        currentPuddleProgress = totalWater - waterCollected;
-                    }
-                }
-
-                UpdateWaterTankFill();
             }
 
-            if (hasBurden)
-            {
-                hasBurden = false;
-                Debug.Log("=== BURDEN CLEARED AT CHARGING STATION ===");
-            }
+            // float drainSpeed = 0.5f;
+
+            // if (waterCollected > 0 || currentPuddleProgress > 0)
+            // {
+            //     if (currentPuddleProgress > 0)
+            //     {
+            //         currentPuddleProgress -= drainSpeed * Time.deltaTime;
+            //         if (currentPuddleProgress < 0)
+            //         {
+            //             currentPuddleProgress = 0;
+            //         }
+            //     }
+            //     else if (waterCollected > 0)
+            //     {
+            //         float totalWater = waterCollected;
+            //         totalWater -= drainSpeed * Time.deltaTime;
+
+            //         if (totalWater <= 0)
+            //         {
+            //             waterCollected = 0;
+            //             currentPuddleProgress = 0;
+            //             Debug.Log("Water tank fully drained!");
+            //         }
+            //         else
+            //         {
+            //             waterCollected = Mathf.FloorToInt(totalWater);
+            //             currentPuddleProgress = totalWater - waterCollected;
+            //         }
+            //     }
+
+            //     UpdateWaterTankFill();
+            // }
+
+            // if (hasBurden)
+            // {
+            //     hasBurden = false;
+            //     Debug.Log("=== BURDEN CLEARED AT CHARGING STATION ===");
+            // }
         }
     }
 
@@ -475,17 +552,17 @@ public class RoombaController : MonoBehaviour
             isCharging = false;
         }
 
-        if (other.CompareTag("WaterPuddle"))
-        {
-            waterPuddlesInContact--;
+        // if (other.CompareTag("WaterPuddle"))
+        // {
+        //     waterPuddlesInContact--;
 
-            if (waterPuddlesInContact <= 0)
-            {
-                waterPuddlesInContact = 0;
-                isOnWater = false;
-                Debug.Log("Left water - normal movement restored");
-            }
-        }
+        //     if (waterPuddlesInContact <= 0)
+        //     {
+        //         waterPuddlesInContact = 0;
+        //         isOnWater = false;
+        //         Debug.Log("Left water - normal movement restored");
+        //     }
+        // }
     }
 
     void UpdateMotorSound(bool isMoving)
@@ -552,126 +629,126 @@ public class RoombaController : MonoBehaviour
             }
         }
     }
+
     public void AddBattery(float amount)
     {
         currentBattery += amount;
         currentBattery = Mathf.Min(currentBattery, maxBattery); 
         UpdateBatteryUI();
     }
-    void UpdateWaterTankFill()
-    {
-        if (waterFill == null) return;
 
-        float totalWater = waterCollected + currentPuddleProgress;
-        float fillPercent = Mathf.Clamp01(totalWater / maxWaterCapacity);
+    // void UpdateWaterTankFill()
+    // {
+    //     if (waterFill == null) return;
 
-        float fillHeight = fillPercent * maxFillHeight;
+    //     float totalWater = waterCollected + currentPuddleProgress;
+    //     float fillPercent = Mathf.Clamp01(totalWater / maxWaterCapacity);
 
-        if (fillHeight <= 0.01f)
-        {
-            if (waterFill.gameObject.activeSelf)
-            {
-                waterFill.gameObject.SetActive(false);
-                Debug.Log("WaterFill hidden (empty)");
-            }
-            return; 
-        }
-        else
-        {
-            if (!waterFill.gameObject.activeSelf)
-            {
-                waterFill.gameObject.SetActive(true);
-                Debug.Log("WaterFill shown (has water)");
-            }
-        }
+    //     float fillHeight = fillPercent * maxFillHeight;
 
-        waterFill.localScale = new Vector3(0.9f, fillHeight, 0.9f);
-        waterFill.localPosition = new Vector3(0, -0.5f + (fillHeight / 2f), 0);
+    //     if (fillHeight <= 0.01f)
+    //     {
+    //         if (waterFill.gameObject.activeSelf)
+    //         {
+    //             waterFill.gameObject.SetActive(false);
+    //             Debug.Log("WaterFill hidden (empty)");
+    //         }
+    //         return; 
+    //     }
+    //     else
+    //     {
+    //         if (!waterFill.gameObject.activeSelf)
+    //         {
+    //             waterFill.gameObject.SetActive(true);
+    //             Debug.Log("WaterFill shown (has water)");
+    //         }
+    //     }
 
-        if (waterTankPercentText != null)
-        {
-            int percentage = Mathf.RoundToInt(fillPercent * 100);
-            waterTankPercentText.text = "Tank: " + percentage + "%";
+    //     waterFill.localScale = new Vector3(0.9f, fillHeight, 0.9f);
+    //     waterFill.localPosition = new Vector3(0, -0.5f + (fillHeight / 2f), 0);
 
-            if (fillPercent >= 1f)
-            {
-                waterTankPercentText.color = Color.red;
-            }
-            else if (fillPercent >= 0.8f)
-            {
-                waterTankPercentText.color = Color.yellow;
-            }
-            else
-            {
-                waterTankPercentText.color = new Color(0, 1, 1);
-            }
-        }
-    }
+    //     if (waterTankPercentText != null)
+    //     {
+    //         int percentage = Mathf.RoundToInt(fillPercent * 100);
+    //         waterTankPercentText.text = "Tank: " + percentage + "%";
 
-    public void ShowWaterTank()
-    {
-        if (waterTank != null)
-        {
-            waterTank.SetActive(true);
-        }
-    }
+    //         if (fillPercent >= 1f)
+    //         {
+    //             waterTankPercentText.color = Color.red;
+    //         }
+    //         else if (fillPercent >= 0.8f)
+    //         {
+    //             waterTankPercentText.color = Color.yellow;
+    //         }
+    //         else
+    //         {
+    //             waterTankPercentText.color = new Color(0, 1, 1);
+    //         }
+    //     }
+    // }
 
-    public void ClearWaterBurden()
-    {
-        if (hasBurden)
-        {
-            hasBurden = false;
-            Debug.Log("Water burden cleared!");
-        }
-    }
+    // public void ShowWaterTank()
+    // {
+    //     if (waterTank != null)
+    //     {
+    //         waterTank.SetActive(true);
+    //     }
+    // }
 
-    public void StartCollectingPuddle()
-    {
-        currentPuddleProgress = 0f;
-    }
+    // public void ClearWaterBurden()
+    // {
+    //     if (hasBurden)
+    //     {
+    //         hasBurden = false;
+    //         Debug.Log("Water burden cleared!");
+    //     }
+    // }
 
-    public void AddWaterProgress(float progressDelta)
-    {
-        float oldProgress = currentPuddleProgress;
-        currentPuddleProgress += progressDelta;
-        currentPuddleProgress = Mathf.Clamp01(currentPuddleProgress);
+    // public void StartCollectingPuddle()
+    // {
+    //     currentPuddleProgress = 0f;
+    // }
 
-        // DEBUG
-        if (Time.frameCount % 30 == 0)
-        {
-            Debug.Log("AddWaterProgress: " + oldProgress.ToString("F2") + " → " +
-                     currentPuddleProgress.ToString("F2") + " | Collected: " + waterCollected);
-        }
+    // public void AddWaterProgress(float progressDelta)
+    // {
+    //     float oldProgress = currentPuddleProgress;
+    //     currentPuddleProgress += progressDelta;
+    //     currentPuddleProgress = Mathf.Clamp01(currentPuddleProgress);
 
-        UpdateWaterTankFill();
-    }
+    //     // DEBUG
+    //     if (Time.frameCount % 30 == 0)
+    //     {
+    //         Debug.Log("AddWaterProgress: " + oldProgress.ToString("F2") + " → " +
+    //                  currentPuddleProgress.ToString("F2") + " | Collected: " + waterCollected);
+    //     }
+    // }
 
-    public void FinalizePuddle()
-    {
-        Debug.Log("=== FINALIZE PUDDLE ===");
+    // public void FinalizePuddle()
+    // {
+    //     Debug.Log("=== FINALIZE PUDDLE ===");
 
-        GameManager gameManager = FindFirstObjectByType<GameManager>();
-        if (gameManager != null)
-        {
-            gameManager.OnWaterPoolCleared();
-        }
+    //     GameManager gameManager = FindFirstObjectByType<GameManager>();
+    //     if (gameManager != null)
+    //     {
+    //         gameManager.OnWaterPoolCleared();
+    //     }
 
-        currentPuddleProgress = 0f;
+    //     currentPuddleProgress = 0f;
 
-        waterCollected++;
-        waterCollected = Mathf.Min(waterCollected, maxWaterCapacity);
+    //     waterCollected++;
+    //     waterCollected = Mathf.Min(waterCollected, maxWaterCapacity);
 
-        ShopManager shop = FindFirstObjectByType<ShopManager>();
-        bool hasUpgrade = (shop != null && shop.hasWaterAttachment);
+    //     ShopManager shop = FindFirstObjectByType<ShopManager>();
+    //     bool hasUpgrade = (shop != null && shop.hasWaterAttachment);
 
-        if (hasUpgrade && waterCollected >= maxWaterCapacity && !hasBurden)
-        {
-            hasBurden = true;
-            Debug.Log(">>> TANK JUST BECAME FULL - BURDEN APPLIED! <<<");
-        }
+    //     if (hasUpgrade && waterCollected >= maxWaterCapacity && !hasBurden)
+    //     {
+    //         hasBurden = true;
+    //         Debug.Log(">>> TANK JUST BECAME FULL - BURDEN APPLIED! <<<");
+    //     }
 
-        UpdateWaterTankFill();
-    }
+    //     UpdateWaterTankFill();
+    // }
 
     public void SetLevelComplete()
     {
@@ -827,5 +904,81 @@ public class RoombaController : MonoBehaviour
         {
             Debug.LogError("GameManager not found!");
         }
+    }
+   
+    void UpdateDustTankVisuals()
+    {
+        if (dustFill == null) return;
+
+        float fillPercent = Mathf.Clamp01((float)dustCollected / maxDustCapacity);
+
+        if (fillPercent <= 0.01f)
+        {
+            // Empty - hide fill
+            if (dustFill.gameObject.activeSelf)
+            {
+                dustFill.gameObject.SetActive(false);
+            }
+        }
+        else
+        {
+            // Has dust - show fill
+            if (!dustFill.gameObject.activeSelf)
+            {
+                dustFill.gameObject.SetActive(true);
+            }
+            
+            // Get the actual height of the tank container
+            float tankHeight = 1f; // Default assumption
+            if (tankContainer != null)
+            {
+                tankHeight = tankContainer.transform.localScale.y;
+            }
+            
+            // Calculate fill height based on actual tank height
+            float fillHeight = fillPercent * tankHeight;
+            
+            // Scale the fill - width matches tank, height grows
+            float tankWidth = tankContainer != null ? tankContainer.transform.localScale.x : 1f;
+            float tankDepth = tankContainer != null ? tankContainer.transform.localScale.z : 1f;
+            dustFill.localScale = new Vector3(tankWidth * 0.9f, fillHeight, tankDepth * 0.9f);
+            
+            // Position: Start at bottom of tank and grow upward
+            float yPosition = -(tankHeight / 2f) + (fillHeight / 2f);
+            dustFill.localPosition = new Vector3(0, yPosition, 0);
+        }
+
+        // Update text UI
+        if (dustTankPercentText != null)
+        {
+            int percentage = Mathf.RoundToInt(fillPercent * 100);
+            dustTankPercentText.text = percentage + "%";
+
+            if (fillPercent >= 1f)
+                dustTankPercentText.color = Color.red;
+            else if (fillPercent >= 0.8f)
+                dustTankPercentText.color = Color.yellow;
+            else
+                dustTankPercentText.color = Color.white;
+        }
+    }
+
+    public void UpgradeDustCapacity(int newCapacity)
+    {
+        maxDustCapacity = newCapacity;
+        
+        // DON'T scale the visual - just increase capacity
+        // The tank stays the same size, but holds more dust
+        
+        UpdateDustTankVisuals();
+        Debug.Log("Dust tank capacity upgraded to: " + newCapacity);
+    }
+
+    public void EmptyDustTank()
+    {
+        dustCollected = 0;
+        isTankFull = false;
+        UpdateDustTankVisuals();
+        Debug.Log("Dust tank manually emptied");
     }
 }
