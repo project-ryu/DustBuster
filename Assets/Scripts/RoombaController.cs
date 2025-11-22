@@ -38,6 +38,29 @@ public class RoombaController : MonoBehaviour
     private float maxDustFillHeight = 1f;
     private bool isTankFull = false;
 
+    [Header("Vacuum Radius")]
+    public CapsuleCollider vacuumCollider; // The trigger collider that picks up dust
+    private float baseVacuumRadius = 0.8f; // Starting radius
+
+    [Header("Turbo Boost")]
+    public KeyCode turboKey = KeyCode.LeftShift;
+    public float turboSpeedMultiplier = 2.5f; // 2.5x normal speed
+    public float turboBatteryDrainMultiplier = 5f; // Drains 5x faster
+    public bool isTurboActive = false;
+
+    [Header("Turbo Audio")]
+    public AudioSource turboSound; // Optional: engine revving sound
+    public float turboSoundPitch = 1.5f;
+
+    [Header("Turbo Visual")]
+    public GameObject turboModule;
+    public Material turboActiveMaterial;
+    public Material turboInactiveMaterial;
+    public bool pulseTurboGlow = true;
+    public float pulseSpeed = 3f;
+    private Renderer turboRenderer;
+    private Material turboMaterialInstance; // Instance to modify
+
     // [Header("Water Tank")]
     // public GameObject waterTank;
     // public Transform waterFill;
@@ -106,8 +129,11 @@ public class RoombaController : MonoBehaviour
 
         if (rb != null)
         {
-            rb.interpolation = RigidbodyInterpolation.Interpolate; // Smooth movement
+            rb.interpolation = RigidbodyInterpolation.Interpolate;
             rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+            
+            // Reset center of mass to prevent jitter from child objects
+            rb.ResetCenterOfMass();
         }
 
         if (cameraController == null)
@@ -124,6 +150,17 @@ public class RoombaController : MonoBehaviour
         {
             idleModeMusic.volume = 0f;
             idleModeMusic.Stop();
+        }
+
+        if (turboModule != null)
+        {
+            turboRenderer = turboModule.GetComponent<Renderer>();
+            
+            // Start with inactive material
+            if (turboRenderer != null && turboInactiveMaterial != null)
+            {
+                turboRenderer.material = turboInactiveMaterial;
+            }
         }
 
         rb.constraints = RigidbodyConstraints.FreezeRotationX |
@@ -198,11 +235,47 @@ public class RoombaController : MonoBehaviour
         { 
             return; 
         }
+        
+        // Check for turbo boost input
+        bool wantsTurbo = Input.GetKey(turboKey) && !batteryDead && !isIdleMode;
+        
+        // Update turbo state
+        if (wantsTurbo && currentBattery > 0)
+        {
+            if (!isTurboActive)
+            {
+                isTurboActive = true;
+                OnTurboActivated();
+            }
+        }
+        else
+        {
+            if (isTurboActive)
+            {
+                isTurboActive = false;
+                OnTurboDeactivated();
+            }
+        }
+
+        // Pulse the turbo glow when active
+        if (isTurboActive && pulseTurboGlow && turboRenderer != null)
+        {
+            float pulse = Mathf.PingPong(Time.time * pulseSpeed, 1f) * 0.5f + 0.5f; // 0.5 to 1.0
+            Color emissionColor = Color.red * pulse * 3f; // Pulse between dim and bright
+            
+            if (turboMaterialInstance != null)
+            {
+                turboMaterialInstance.SetColor("_EmissionColor", emissionColor);
+            }
+        }
+        
         bool isMoving = IsPlayerMoving();
 
+        // Battery drain - increased when using turbo
         if (!isCharging && currentBattery > 0 && isMoving)
         {
-            currentBattery -= batteryDrainRate * Time.deltaTime;
+            float drainRate = isTurboActive ? batteryDrainRate * turboBatteryDrainMultiplier : batteryDrainRate;
+            currentBattery -= drainRate * Time.deltaTime;
             currentBattery = Mathf.Max(0, currentBattery);
             UpdateBatteryUI();
         }
@@ -218,6 +291,7 @@ public class RoombaController : MonoBehaviour
 
         UpdateMotorSound(isMoving);
 
+        // Debug
         if (Input.GetKeyDown(KeyCode.P) && tankContainer != null)
         {
             Debug.Log("=== TANK DEBUG ===");
@@ -244,94 +318,61 @@ public class RoombaController : MonoBehaviour
             return;
         }
 
-        // if (isCharging && hasBurden)
-        // {
-        //     hasBurden = false;
-        // }
+        // ALWAYS clear angular velocity first
+        rb.angularVelocity = Vector3.zero;
 
         float move = Input.GetAxis("Vertical");
         float rotate = Input.GetAxis("Horizontal");
 
-        rb.angularVelocity = Vector3.zero;
-
-        float speedMultiplier = 1f;
-
-        if (batteryDead)
+        float speedMultiplier = batteryDead ? 0.2f : 1f;
+        
+        if (isTurboActive)
         {
-            speedMultiplier = 0.2f;
+            speedMultiplier *= turboSpeedMultiplier;
         }
-
+        
         float currentSpeed = moveSpeed * speedMultiplier;
 
-        // float appliedSlipperiness = 0f;
-        // float appliedDrag = 1f;
-
-        // ShopManager shop = FindFirstObjectByType<ShopManager>();
-        // bool hasUpgrade = (shop != null && shop.hasWaterAttachment);
-
-        // bool shouldHaveBurden = (!hasUpgrade && isOnWater) ||
-        //                         (hasUpgrade && waterCollected >= maxWaterCapacity);
-
-        // if (shouldHaveBurden || hasBurden)
-        // {
-        //     float resistanceReduction = waterResistanceLevel * 0.15f;
-        //     appliedSlipperiness = burdenSlipperiness * (1f - resistanceReduction);
-        //     appliedDrag = burdenDrag * (1f + resistanceReduction * 2f);
-        // }
-        // else if (isOnWater)
-        // {
-        //     appliedSlipperiness = waterSlipperiness;
-        //     appliedDrag = waterDrag;
-        // }
-
-        // if (appliedSlipperiness > 0)
-        // {
-        //     move *= (1f - appliedSlipperiness);
-        //     rotate *= (1f - appliedSlipperiness);
-        //     rb.linearVelocity *= (1f - appliedDrag * Time.fixedDeltaTime);
-        // }
-
+        // Rotation
         float turn = rotate * rotateSpeed * Time.fixedDeltaTime;
         Quaternion turnRotation = Quaternion.Euler(0f, turn, 0f);
         rb.MoveRotation(rb.rotation * turnRotation);
+        
+        // Clear angular velocity again
+        rb.angularVelocity = Vector3.zero;
 
-        Vector3 moveDirection = transform.forward * move * currentSpeed;
-
-        // if (appliedSlipperiness > 0)
-        // {
-        //     rb.linearVelocity += moveDirection * Time.fixedDeltaTime;
-
-        //     if (rb.linearVelocity.magnitude > currentSpeed)
-        //     {
-        //         rb.linearVelocity = rb.linearVelocity.normalized * currentSpeed;
-        //     }
-        // }
-        // else
-        // {
-        //     rb.linearVelocity = new Vector3(moveDirection.x, 0, moveDirection.z);
-        // }
-
+        // Movement - INSTANT response (no acceleration)
+        Vector3 targetVelocity;
+        
         if (isIdleMode)
         {
-            // Idle mode - automatic movement
-            AutomaticMovement();
+            targetVelocity = transform.forward * idleMoveSpeed;
         }
         else
         {
-            // Manual control
-            ManualMovement();
+            targetVelocity = transform.forward * move * currentSpeed;
         }
+        
+        // Direct velocity assignment for instant response
+        rb.linearVelocity = new Vector3(targetVelocity.x, 0, targetVelocity.z);
     }
 
     void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("DustTile"))
         {
+            // Can't vacuum during turbo boost!
+            if (isTurboActive)
+            {
+                Debug.Log("Can't vacuum during turbo boost!");
+                return;
+            }
+            
             // Check if tank is full
             if (isTankFull)
             {
                 Debug.Log("Dust tank is FULL! Can't collect more dust. Empty at charging station!");
-                return; // Don't collect if tank is full
+                return;
             }
 
             // Spawn dust puff effect
@@ -767,52 +808,68 @@ public class RoombaController : MonoBehaviour
         }
     }
 
-    void ManualMovement()
-    {
-        float moveInput = Input.GetAxis("Vertical");
-        float rotateInput = Input.GetAxis("Horizontal");
-
-        // Move using Rigidbody
-        Vector3 movement = transform.forward * moveInput * moveSpeed * Time.fixedDeltaTime;
-        rb.MovePosition(rb.position + movement);
-        
-        // Rotate using Rigidbody
-        float rotation = rotateInput * rotateSpeed * Time.fixedDeltaTime;
-        Quaternion deltaRotation = Quaternion.Euler(0, rotation, 0);
-        rb.MoveRotation(rb.rotation * deltaRotation);
-    }
-    
-    void AutomaticMovement()
-    {
-        // Move forward using Rigidbody
-        Vector3 movement = transform.forward * idleMoveSpeed * Time.fixedDeltaTime;
-        rb.MovePosition(rb.position + movement);
-    }
-
-
     void OnCollisionEnter(Collision collision)
     {
-        if (!isIdleMode) return;
-
-        // Bounce off anything that's not dust/water (which use triggers)
-        // Optionally exclude the floor
-        if (collision.gameObject.CompareTag("Floor"))
-        {
-            return; // Don't bounce off floor
-        }
-
-        // Bounce off everything else
-        float bounceAngle = Random.Range(90f, 180f);
+        // ALWAYS clear angular velocity on any collision
+        rb.angularVelocity = Vector3.zero;
         
-        if (Random.value > 0.5f)
+        // Don't interfere with idle mode bouncing
+        if (isIdleMode)
         {
-            Quaternion rotation = Quaternion.Euler(0, bounceAngle, 0);
-            rb.MoveRotation(rb.rotation * rotation);
+            if (collision.gameObject.CompareTag("Floor"))
+            {
+                return;
+            }
+
+            float bounceAngle = Random.Range(90f, 180f);
+            
+            if (Random.value > 0.5f)
+            {
+                Quaternion rotation = Quaternion.Euler(0, bounceAngle, 0);
+                rb.MoveRotation(rb.rotation * rotation);
+            }
+            else
+            {
+                Quaternion rotation = Quaternion.Euler(0, -bounceAngle, 0);
+                rb.MoveRotation(rb.rotation * rotation);
+            }
+            
+            // Clear velocity after bounce
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero; // Clear again after bounce
+            return;
         }
-        else
+
+        // For normal mode: dampen velocity on wall hits
+        if (!collision.gameObject.CompareTag("Floor"))
         {
-            Quaternion rotation = Quaternion.Euler(0, -bounceAngle, 0);
-            rb.MoveRotation(rb.rotation * rotation);
+            Vector3 normal = collision.contacts[0].normal;
+            Vector3 velocity = rb.linearVelocity;
+            velocity = Vector3.ProjectOnPlane(velocity, normal) * 0.3f;
+            rb.linearVelocity = velocity;
+            
+            // Make sure rotation stops too
+            rb.angularVelocity = Vector3.zero;
+            
+            Debug.Log("Hit wall - dampening velocity and clearing rotation");
+        }
+    }
+
+    void OnCollisionStay(Collision collision)
+    {
+        // Always clear angular velocity when touching walls
+        rb.angularVelocity = Vector3.zero;
+        
+        // If we're still touching a wall and not moving forward, clear velocity
+        if (!collision.gameObject.CompareTag("Floor") && !isIdleMode)
+        {
+            float moveInput = Input.GetAxis("Vertical");
+            
+            // If player isn't trying to move forward, clear lateral velocity
+            if (Mathf.Abs(moveInput) < 0.1f)
+            {
+                rb.linearVelocity = Vector3.zero;
+            }
         }
     }
 
@@ -980,5 +1037,68 @@ public class RoombaController : MonoBehaviour
         isTankFull = false;
         UpdateDustTankVisuals();
         Debug.Log("Dust tank manually emptied");
+    }
+
+    public void SetVacuumRadius(float newRadius)
+    {
+        if (vacuumCollider != null)
+        {
+            vacuumCollider.radius = newRadius;
+            Debug.Log($"Vacuum radius set to: {newRadius}");
+        }
+        else
+        {
+            Debug.LogWarning("Vacuum collider not assigned! Cannot change radius.");
+        }
+    }
+
+    void OnTurboActivated()
+    {
+        Debug.Log("🚀 TURBO BOOST ACTIVATED!");
+        
+        if (turboRenderer != null && turboActiveMaterial != null)
+        {
+            // Create instance to modify
+            turboMaterialInstance = new Material(turboActiveMaterial);
+            turboRenderer.material = turboMaterialInstance;
+        }
+        
+        if (motorSound != null)
+        {
+            motorSound.pitch = turboSoundPitch;
+        }
+        
+        if (turboSound != null && !turboSound.isPlaying)
+        {
+            turboSound.Play();
+        }
+    }
+
+    void OnTurboDeactivated()
+    {
+        Debug.Log("Turbo boost deactivated");
+        
+        if (turboRenderer != null && turboInactiveMaterial != null)
+        {
+            turboRenderer.material = turboInactiveMaterial;
+            
+            // Clean up instance
+            if (turboMaterialInstance != null)
+            {
+                Destroy(turboMaterialInstance);
+                turboMaterialInstance = null;
+            }
+        }
+        
+        if (motorSound != null)
+        {
+            float batteryPercent = currentBattery / maxBattery;
+            motorSound.pitch = Mathf.Lerp(0.7f, 1.0f, batteryPercent);
+        }
+        
+        if (turboSound != null && turboSound.isPlaying)
+        {
+            turboSound.Stop();
+        }
     }
 }

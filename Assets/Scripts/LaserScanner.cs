@@ -4,88 +4,80 @@ using System.Collections.Generic;
 public class LaserScanner : MonoBehaviour
 {
     [Header("Scanner Settings")]
-    public float scanRange = 5f; // Current scan range
-    public float scanInterval = 0.2f; // How often to scan (in seconds)
-    public LayerMask dustLayer; // Optional: assign if dust is on specific layer
+    public float scanRange = 15f;
+    public float scanInterval = 2f;
+    public LayerMask dustLayer;
     
-    [Header("Visual Indicator")]
-    public GameObject scanRangeIndicator; // Optional visual ring
-    public bool showScanRange = true;
+    [Header("Ring Wave Visual")]
+    public float ringThickness = 0.5f; // How thick the ring is
+    public float waveExpandSpeed = 20f;
+    public Color ringColor = Color.cyan;
+    public float ringEmissionIntensity = 2f;
+    public int ringSegments = 64; // Ring detail
     
     [Header("Upgrade Levels")]
-    public float[] scanRangeLevels = new float[] { 3f, 6f, 10f }; // Levels 1, 2, 3
-    public int currentLevel = 0; // 0 = not purchased, 1-3 = upgrade levels
+    public float[] scanRangeLevels = new float[] { 15f, 30f, 50f };
+    public int currentLevel = 0;
+    
+    [Header("Dust Highlight Settings")]
+    public float highlightDuration = 0.5f; // Dust highlighted briefly as ring passes
     
     private float scanTimer;
-    private List<GameObject> currentlyHighlightedDust = new List<GameObject>();
+    private HashSet<GameObject> processedDust = new HashSet<GameObject>();
     
     void Start()
     {
-        // Set initial range based on level
+        // If currentLevel is set, use the level's range
         if (currentLevel > 0 && currentLevel <= scanRangeLevels.Length)
         {
             scanRange = scanRangeLevels[currentLevel - 1];
+            Debug.Log($"Scanner initialized at Level {currentLevel} with range: {scanRange}m");
         }
-        
-        // Create scan range indicator if it doesn't exist
-        if (scanRangeIndicator == null && showScanRange)
+        else
         {
-            CreateScanRangeIndicator();
+            Debug.Log($"Scanner using manual range: {scanRange}m (Level: {currentLevel})");
         }
         
-        UpdateScanRangeVisual();
+        // Send first pulse immediately if scanner is active
+        if (currentLevel > 0)
+        {
+            SendSonarPulse();
+        }
     }
     
     void Update()
     {
-        // Only scan if scanner is purchased (level > 0)
         if (currentLevel == 0) return;
         
         scanTimer += Time.deltaTime;
         
         if (scanTimer >= scanInterval)
         {
-            ScanForDust();
+            SendSonarPulse();
             scanTimer = 0f;
         }
     }
     
-    void ScanForDust()
+    void SendSonarPulse()
     {
-        // Clear previous highlights
-        foreach (GameObject dust in currentlyHighlightedDust)
-        {
-            if (dust != null)
-            {
-                DustHighlighter highlighter = dust.GetComponent<DustHighlighter>();
-                if (highlighter != null)
-                {
-                    highlighter.RemoveHighlight();
-                }
-            }
-        }
-        currentlyHighlightedDust.Clear();
+        Debug.Log($"🔊 SONAR PULSE! Scanner Level: {currentLevel}, Range: {scanRange}m");
         
-        // Find all dust objects in range
-        Collider[] hitColliders = Physics.OverlapSphere(transform.position, scanRange);
+        // Create ring wave
+        GameObject ringWave = new GameObject("SonarRing");
+        ringWave.transform.position = transform.position;
         
-        foreach (Collider col in hitColliders)
-        {
-            // Check if it's dust (by tag or layer)
-            if (col.CompareTag("DustTile"))
-            {
-                DustHighlighter highlighter = col.GetComponent<DustHighlighter>();
-                
-                // Add highlighter component if it doesn't exist
-                if (highlighter == null)
-                {
-                    highlighter = col.gameObject.AddComponent<DustHighlighter>();
-                }
-                
-                highlighter.Highlight();
-                currentlyHighlightedDust.Add(col.gameObject);
-            }
-        }
+        SonarRingWave waveScript = ringWave.AddComponent<SonarRingWave>();
+        waveScript.Initialize(
+            scanRange,  // Make sure this is the right value
+            waveExpandSpeed, 
+            ringThickness, 
+            ringColor, 
+            ringEmissionIntensity,
+            ringSegments,
+            highlightDuration
+        );
+        
+        Debug.Log($"Ring created with maxRadius: {scanRange}");
     }
     
     public void UpgradeScanner()
@@ -94,7 +86,6 @@ public class LaserScanner : MonoBehaviour
         {
             currentLevel++;
             scanRange = scanRangeLevels[currentLevel - 1];
-            UpdateScanRangeVisual();
             Debug.Log($"Scanner upgraded to level {currentLevel}! Range: {scanRange}m");
         }
     }
@@ -106,68 +97,166 @@ public class LaserScanner : MonoBehaviour
     
     public void SetScannerLevel(int level)
     {
+        int previousLevel = currentLevel;
         currentLevel = Mathf.Clamp(level, 0, scanRangeLevels.Length);
+        
         if (currentLevel > 0)
         {
             scanRange = scanRangeLevels[currentLevel - 1];
-            UpdateScanRangeVisual();
-        }
-    }
-    
-    void CreateScanRangeIndicator()
-    {
-        // Create a simple cylinder ring to show scan range
-        scanRangeIndicator = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        scanRangeIndicator.name = "ScanRangeIndicator";
-        scanRangeIndicator.transform.SetParent(transform);
-        scanRangeIndicator.transform.localPosition = Vector3.zero;
-        
-        // Make it a flat ring
-        scanRangeIndicator.transform.localScale = new Vector3(scanRange * 2, 0.01f, scanRange * 2);
-        
-        // Remove collider so it doesn't interfere
-        Destroy(scanRangeIndicator.GetComponent<Collider>());
-        
-        // Create semi-transparent material
-        Material ringMat = new Material(Shader.Find("Standard"));
-        ringMat.color = new Color(0f, 1f, 1f, 0.2f); // Cyan, semi-transparent
-        ringMat.SetFloat("_Mode", 3); // Transparent mode
-        ringMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-        ringMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-        ringMat.SetInt("_ZWrite", 0);
-        ringMat.DisableKeyword("_ALPHATEST_ON");
-        ringMat.EnableKeyword("_ALPHABLEND_ON");
-        ringMat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-        ringMat.renderQueue = 3000;
-        
-        scanRangeIndicator.GetComponent<Renderer>().material = ringMat;
-    }
-    
-    void UpdateScanRangeVisual()
-    {
-        if (scanRangeIndicator != null)
-        {
-            scanRangeIndicator.transform.localScale = new Vector3(scanRange * 2, 0.01f, scanRange * 2);
-            scanRangeIndicator.SetActive(currentLevel > 0 && showScanRange);
-        }
-    }
-    
-    public void ToggleScanRangeVisual(bool show)
-    {
-        showScanRange = show;
-        if (scanRangeIndicator != null)
-        {
-            scanRangeIndicator.SetActive(show && currentLevel > 0);
+            Debug.Log($"Scanner level set to {currentLevel}, range: {scanRange}m");
+            
+            // Send immediate pulse when first activated or upgraded
+            if (previousLevel == 0)
+            {
+                Debug.Log("Scanner activated for first time - sending immediate pulse!");
+                SendSonarPulse();
+                scanTimer = 0f; // Reset timer so next pulse happens at correct interval
+            }
         }
     }
     
     void OnDrawGizmosSelected()
     {
-        // Draw scan range in editor
         if (currentLevel > 0)
         {
             Gizmos.color = Color.cyan;
             Gizmos.DrawWireSphere(transform.position, scanRange);
+        }
+    }
+}
+
+public class SonarRingWave : MonoBehaviour
+{
+    private float maxRadius;
+    private float expandSpeed;
+    private float ringThickness;
+    private float currentRadius = 0f;
+    private float highlightDuration;
+    
+    private HashSet<GameObject> highlightedDust = new HashSet<GameObject>();
+    
+    // Track highlights with individual timers
+    private class HighlightTimer
+    {
+        public DustHighlighter highlighter;
+        public float timeRemaining;
+    }
+    private List<HighlightTimer> activeHighlights = new List<HighlightTimer>();
+    
+    public void Initialize(float maxRad, float speed, float thickness, Color color, float emission, int segs, float highlightDur)
+    {
+        maxRadius = maxRad;
+        expandSpeed = speed;
+        ringThickness = thickness;
+        highlightDuration = highlightDur;
+    }
+    
+    void Update()
+    {
+        // Only expand if we haven't reached max radius yet
+        if (currentRadius < maxRadius)
+        {
+            currentRadius += expandSpeed * Time.deltaTime;
+            
+            // Clamp to max (don't overshoot)
+            currentRadius = Mathf.Min(currentRadius, maxRadius);
+            
+            // Only scan while expanding
+            ScanAtCurrentRadius();
+            
+            // Debug every 30 frames
+            if (Time.frameCount % 30 == 0)
+            {
+                Debug.Log($"Ring expanding: {currentRadius:F1}m / {maxRadius:F1}m");
+            }
+        }
+        
+        // Always update highlight timers
+        UpdateHighlightTimers();
+        
+        // Destroy when reached max radius and all highlights are done
+        if (currentRadius >= maxRadius && activeHighlights.Count == 0)
+        {
+            Debug.Log($"Ring complete at {maxRadius}m - destroying");
+            Destroy(gameObject);
+        }
+    }
+    
+    void ScanAtCurrentRadius()
+    {
+        Vector3 center = transform.position;
+        center.y = 0;
+        
+        Collider[] hitColliders = Physics.OverlapSphere(center, currentRadius + ringThickness);
+        
+        foreach (Collider col in hitColliders)
+        {
+            if (col.CompareTag("DustTile"))
+            {
+                if (highlightedDust.Contains(col.gameObject))
+                    continue;
+                
+                Vector3 dustPos = col.transform.position;
+                dustPos.y = 0;
+                float distance = Vector3.Distance(center, dustPos);
+                
+                if (Mathf.Abs(distance - currentRadius) <= ringThickness)
+                {
+                    HighlightDust(col.gameObject);
+                    highlightedDust.Add(col.gameObject);
+                }
+            }
+        }
+    }
+    
+    void HighlightDust(GameObject dust)
+    {
+        DustHighlighter highlighter = dust.GetComponent<DustHighlighter>();
+        
+        if (highlighter == null)
+        {
+            highlighter = dust.gameObject.AddComponent<DustHighlighter>();
+        }
+        
+        highlighter.Highlight();
+        
+        // Add to timer list
+        activeHighlights.Add(new HighlightTimer
+        {
+            highlighter = highlighter,
+            timeRemaining = highlightDuration
+        });
+    }
+    
+    void UpdateHighlightTimers()
+    {
+        // Count down all active highlights
+        for (int i = activeHighlights.Count - 1; i >= 0; i--)
+        {
+            HighlightTimer timer = activeHighlights[i];
+            timer.timeRemaining -= Time.deltaTime;
+            
+            if (timer.timeRemaining <= 0)
+            {
+                // Time expired - remove highlight
+                if (timer.highlighter != null)
+                {
+                    timer.highlighter.RemoveHighlight();
+                }
+                activeHighlights.RemoveAt(i);
+            }
+        }
+    }
+    
+    void OnDestroy()
+    {
+        // Clean up any remaining highlights
+        foreach (var timer in activeHighlights)
+        {
+            if (timer.highlighter != null)
+            {
+                timer.highlighter.RemoveHighlight();
+            }
         }
     }
 }

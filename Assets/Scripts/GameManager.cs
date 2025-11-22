@@ -16,7 +16,7 @@ public class GameManager : MonoBehaviour
     private bool objectivesCalculated = false;
 
     [Header("Economy")]
-    public int botcoins = 200;
+    public int botcoins = 1000;
     public int levelCompletionReward = 200;
 
     [Header("UI References")]
@@ -47,6 +47,20 @@ public class GameManager : MonoBehaviour
         if (shopManager == null)
         {
             shopManager = FindFirstObjectByType<ShopManager>();
+        }
+
+        if (!PlayerPrefs.HasKey("Botcoins"))
+        {
+            // Use whatever you set in Inspector as the starting amount
+            PlayerPrefs.SetInt("Botcoins", botcoins);
+            PlayerPrefs.Save();
+            Debug.Log($"First time playing - starting with {botcoins} botcoins");
+        }
+        else
+        {
+            // Load saved amount
+            botcoins = PlayerPrefs.GetInt("Botcoins", 0);
+            Debug.Log($"Loaded {botcoins} botcoins from save");
         }
 
         dustTilesCleared = 0;
@@ -117,7 +131,7 @@ public class GameManager : MonoBehaviour
             newPos.y += bounce;
             chargingStationIndicator.transform.localPosition = newPos;
         }
-        if (Input.GetKeyDown(KeyCode.R) && Input.GetKey(KeyCode.LeftShift))
+        if (Input.GetKeyDown(KeyCode.T) && Input.GetKey(KeyCode.LeftShift))
         {
             Debug.Log("=== RESETTING ALL SAVED DATA ===");
             PlayerPrefs.DeleteAll();

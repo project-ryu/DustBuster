@@ -50,7 +50,7 @@ MonoBehaviour:
   shopManager: {fileID: 0}
   totalDustTiles: 0
   totalWaterPools: 0
-  botcoins: 200
+  botcoins: 1000
   levelCompletionReward: 200
   botcoinText: {fileID: 0}
   dustTilesText: {fileID: 0}
